@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .chat-content{
+            background-color: aquamarine;
+            width : 500px;
+            height : 500px;
+    
+            /* position: relative;
+            right : 50%;
+            bottom : 50%; */
+        }
+    </style>
+</head>
+<body>
+    <ul>
+        <li onclick='joinZoom("Node.js")'>Node.js</li>
+        <li onclick='joinZoom("Php")'>Php</li>
+        <li onclick='joinZoom("Java")'>Java</li>
+    </ul>
+
+    <input id="name_connect" autocomplete="off"/>
+    <button onclick="connect()">Connect</button>
+
+    <ul id="user-online-list">
+        user online 
+    </ul>
+
+   <div class="chat-content">
+       <div id="content-chat">
+
+       </div>
+        <div>
+            <input id="msg-input" autocomplete="off"/>
+            <button onclick="sendMsg()">send</button>
+        </div>
+   </div>
+  
+   
+    <script type="text/javascript">
+        var User = "";
+        var toPrivateId = "";
+        var clientId = "";
+        var currentZoom = "";
+        var acitveList = [];
+        let client = io("http://localhost:3000/chat", {
+            query: {token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImhhaGFoaGFoYSIsImlhdCI6MTY2ODc3OTg0MSwiZXhwIjoxNjY4NzgwMTQxfQ.pjJMoXKupxQ0AH2RCqmNYMmnVpaj21DlmTBNXoSYusk"}
+        });
+
+        //emit event
+        function connect(){
+            var input     = document.getElementById('name_connect');
+            if(input.value) {
+                User = input.value;
+                client.emit("sign" , input.value.toLowerCase().trim());
+            }
+            input.value = '';
+        }
+
+        function sendMsg(){
+            var input     = document.getElementById('msg-input');
+            if(input.value) {
+                client.emit("private-chat" , { from : User, to : toPrivateId, msg : input.value.toLowerCase().trim() });
+            }
+            input.value = '';
+        }
+
+        function joinZoom(zoom){
+            client.emit("join-zoom" , { user : User, zoom : zoom });
+        }
+
+        function makePrivateChat(zoomId){
+            toPrivateId = zoomId;
+            ///client.emit("join-private" , zoomId);
+        }
+
+        client.on('connect', () => {
+            clientId = client.id;
+        });
+
+        //listen event;
+        client.on("user-online", (onlineList)=>{
+            acitveList   = [...onlineList];
+            console.log("acitveList : " , acitveList);
+            console.log("clientId : " , clientId);
+            var list     = document.getElementById('user-online-list');
+
+            for(let idx = 0; idx < acitveList.length; idx++){
+                console.log("acitveList[idx] : " , acitveList[idx]);
+
+                if(acitveList[idx] != User) {
+                    let item = document.getElementById(acitveList[idx]);
+                    if(!item){
+                        item =  document.createElement("li");
+                        item.setAttribute("id", acitveList[idx]);
+                        item.append(acitveList[idx]);
+                        list.append(item);
+                        item.onclick = function(){ makePrivateChat(acitveList[idx]) } ;
+                    }
+                }
+
+            }
+        });
+        
+        client.on("send-private", (msg)=>{
+            var content  = document.getElementById('content-chat');
+            item        =  document.createElement("div");
+
+            item.append(msg);
+            content.append(item);
+        });
+
+        client.on("join-success", (data)=>{
+            alert(data);
+        });
+
+
+    </script>
+</body>
+</html>
